@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "categories": [
+    {
+      "id": "everyday",
+      "name": "Everyday",
+      "icon": "◈"
+    },
+    {
+      "id": "homelab",
+      "name": "Homelab",
+      "icon": "▣"
+    },
+    {
+      "id": "work",
+      "name": "Work",
+      "icon": "▤"
+    },
+    {
+      "id": "tools",
+      "name": "Tools",
+      "icon": "⌘"
+    }
+  ],
+  "links": [
+    {
+      "id": "demo-plex",
+      "name": "Plex",
+      "url": "https://app.plex.tv",
+      "description": "Your movies, TV and music, ready to play.",
+      "category": "homelab",
+      "icon": "▶",
+      "color": "#fbbf24",
+      "pinned": true,
+      "image": "",
+      "visits": 24,
+      "lastVisited": 1793228400000
+    },
+    {
+      "id": "demo-stats",
+      "name": "HomeLabStats",
+      "url": "https://bhxuk.github.io/HomeLabStats/demo/",
+      "description": "Your server, at a glance.",
+      "category": "homelab",
+      "icon": ">_",
+      "color": "#22d3ee",
+      "pinned": true,
+      "image": "",
+      "visits": 12,
+      "lastVisited": 1793224800000
+    },
+    {
+      "id": "demo-sonarr",
+      "name": "Sonarr",
+      "url": "https://sonarr.tv",
+      "description": "Keep up with your favourite series.",
+      "category": "homelab",
+      "icon": "S",
+      "color": "#f472b6",
+      "pinned": false,
+      "image": "",
+      "visits": 8,
+      "lastVisited": 1793221200000
+    },
+    {
+      "id": "demo-link-0",
+      "name": "GitHub",
+      "url": "https://github.com/bhxuk",
+      "description": "Your repositories and projects.",
+      "category": "everyday",
+      "icon": "GH",
+      "image": "",
+      "color": "#22d3ee",
+      "pinned": true,
+      "visits": 0,
+      "lastVisited": 0
+    },
+    {
+      "id": "demo-link-1",
+      "name": "YouTube",
+      "url": "https://www.youtube.com",
+      "description": "Watch something worth your time.",
+      "category": "everyday",
+      "icon": "▶",
+      "image": "",
+      "color": "#a78bfa",
+      "pinned": true,
+      "visits": 0,
+      "lastVisited": 0
+    },
+    {
+      "id": "demo-link-2",
+      "name": "Outlook",
+      "url": "https://outlook.office.com",
+      "description": "Email, calendar and the daily essentials.",
+      "category": "work",
+      "icon": "O",
+      "image": "",
+      "color": "#34d399",
+      "pinned": true,
+      "visits": 0,
+      "lastVisited": 0
+    },
+    {
+      "id": "demo-link-3",
+      "name": "Notion",
+      "url": "https://www.notion.so",
+      "description": "Notes, projects and a place for your ideas.",
+      "category": "work",
+      "icon": "N",
+      "image": "",
+      "color": "#fbbf24",
+      "pinned": false,
+      "visits": 0,
+      "lastVisited": 0
+    },
+    {
+      "id": "demo-link-4",
+      "name": "CyberChef",
+      "url": "https://gchq.github.io/CyberChef/",
+      "description": "Encode, decode and transform data.",
+      "category": "tools",
+      "icon": "⌘",
+      "image": "",
+      "color": "#f472b6",
+      "pinned": false,
+      "visits": 0,
+      "lastVisited": 0
+    },
+    {
+      "id": "demo-link-5",
+      "name": "Regex101",
+      "url": "https://regex101.com",
+      "description": "Build and test regular expressions.",
+      "category": "tools",
+      "icon": ".*",
+      "image": "",
+      "color": "#60a5fa",
+      "pinned": false,
+      "visits": 0,
+      "lastVisited": 0
+    }
+  ],
+  "notes": "A home for the things I use every day.\n\n→ Check the server backups\n→ Add a few more favourite links",
+  "tasks": [
+    {
+      "id": "demo-task-1",
+      "text": "Make this space my own",
+      "done": false
+    },
+    {
+      "id": "demo-task-2",
+      "text": "One place for all my apps",
+      "done": true
+    }
+  ],
+  "settings": {
+    "name": "My dashboard",
+    "timezone": "Europe/London",
+    "theme": "dark",
+    "background": "aurora",
+    "accent": "#22d3ee",
+    "compact": false,
+    "seconds": false
+  },
+  "revision": 1
+}

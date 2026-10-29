@@ -1,0 +1,22 @@
+services:
+  dash:
+    build: .
+    image: dash:local
+    container_name: dash
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    ports:
+      # Bind to the server's specific LAN address. No public interface by default.
+      - "${LAN_IP:-127.0.0.1}:${DASH_PORT:-8088}:8088"
+    environment:
+      DATA_DIR: /data
+      PORT: "8088"
+      INSTALL_METHOD: docker
+      DASH_HOSTNAMES: "${DASH_HOSTNAMES:-}"
+      TZ: Europe/London
+    volumes:
+      - ./:/app
+      - ./data:/data
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 15s

@@ -1,0 +1,140 @@
+name: Test, release and publish
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: dash-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Test app and Docker
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: API, storage, access and update recovery tests
+        run: python -m unittest discover -s tests -v
+      - name: Frontend and shell syntax
+        run: |
+          node --check app/static/app.js
+          node --check docs/landing.js
+          bash -n install.sh
+      - name: Check version, changelog and generated demo
+        run: |
+          python scripts/build_pages.py
+          python - <<'PY'
+          import re
+          from pathlib import Path
+          v=Path('app/VERSION').read_text().strip()
+          assert re.fullmatch(r'\d+\.\d+\.\d+', v), 'Invalid app version'
+          assert f'## [{v}]' in Path('CHANGELOG.md').read_text(), 'Missing changelog entry'
+          assert Path('docs/img/dashboard.jpg').is_file(), 'Missing dashboard screenshot'
+          PY
+          git diff --exit-code -- docs/demo docs/CHANGELOG.md docs/icon.svg
+      - name: Build and smoke test Docker
+        run: |
+          docker build -t dash:test .
+          docker run -d --name dash-ci -p 127.0.0.1:8088:8088 dash:test
+          ready=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8088/api/health; then ready=1; break; fi
+            sleep 1
+          done
+          test "$ready" = 1 || { docker logs dash-ci; exit 1; }
+          curl -fsS http://127.0.0.1:8088/api/state > /dev/null
+          docker inspect --format='{{.Config.User}}' dash-ci | grep -qx dash
+          docker logs dash-ci
+          docker rm -f dash-ci
+
+  release:
+    name: Publish stable release and container
+    if: github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Read version and release notes
+        id: version
+        run: |
+          echo "value=$(tr -d '[:space:]' < app/VERSION)" >> "$GITHUB_OUTPUT"
+          python - <<'PY'
+          from pathlib import Path
+          v=Path('app/VERSION').read_text().strip()
+          text=Path('CHANGELOG.md').read_text()
+          entry=text.split(f'## [{v}]',1)[1].split('\n## ',1)[0]
+          Path('/tmp/dash-release-notes.md').write_text('## Dash '+v+'\n\n'+entry.split('\n',1)[1].strip()+'\n\n[Website](https://bhxuk.github.io/Dash/) · [Live demo](https://bhxuk.github.io/Dash/demo/) · [Install](https://github.com/bhxuk/Dash#install)\n')
+          PY
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish container
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/bhxuk/dash:latest
+            ghcr.io/bhxuk/dash:${{ steps.version.outputs.value }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/bhxuk/Dash
+            org.opencontainers.image.description=Dash personal LAN dashboard by bhxuk
+            org.opencontainers.image.version=${{ steps.version.outputs.value }}
+            org.opencontainers.image.licenses=MIT
+      - name: Publish versioned GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if gh release view "v$VERSION" > /dev/null 2>&1; then
+            echo "Release v$VERSION already exists; keeping its immutable tag."
+          else
+            gh release create "v$VERSION" --target "$GITHUB_SHA" --title "Dash v$VERSION" --notes-file /tmp/dash-release-notes.md --latest
+          fi
+
+  pages:
+    name: Publish website and interactive demo
+    if: github.event_name != 'pull_request'
+    needs: check
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
