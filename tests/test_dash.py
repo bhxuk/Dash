@@ -59,6 +59,23 @@ class StorageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate(bad)
 
+    def test_layouts_persist_and_old_backups_stay_compatible(self):
+        old = self.store.read()
+        old['settings'].pop('layout', None)
+        old['settings']['compact'] = False
+        self.assertEqual(validate(old)['settings']['layout'], 'compact')
+        for layout in ('cards', 'compact', 'table', 'tv'):
+            current = self.store.read()
+            current['settings']['layout'] = layout
+            current['notes'] = 'Keep these notes'
+            saved = self.store.save(current)
+            self.assertEqual(saved['settings']['layout'], layout)
+            self.assertEqual(Store(self.temp.name).read()['notes'], 'Keep these notes')
+        invalid = self.store.read()
+        invalid['settings']['layout'] = 'unknown'
+        with self.assertRaises(ValueError):
+            self.store.save(invalid)
+
     def test_corrupt_storage_is_not_replaced(self):
         self.store.path.write_text('broken')
         with self.assertRaises(ValueError):

@@ -160,7 +160,8 @@
     "theme": "dark",
     "background": "aurora",
     "accent": "#22d3ee",
-    "compact": false,
+    "layout": "compact",
+    "compact": true,
     "seconds": false
   },
   "revision": 1

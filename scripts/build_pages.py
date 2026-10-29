@@ -10,7 +10,7 @@ from app.store import initial, COLORS
 def build():
     demo = root / 'docs/demo'
     demo.mkdir(parents=True, exist_ok=True)
-    for name in ['app.css', 'app.js', 'icon.svg']:
+    for name in ['app.css', 'app.js', 'importer.js', 'icon.svg']:
         shutil.copyfile(root / 'app/static' / name, demo / name)
     html = (root / 'app/static/index.html').read_text().replace('<html lang="en">', '<html lang="en" data-demo="true">')
     (demo / 'index.html').write_text(html)

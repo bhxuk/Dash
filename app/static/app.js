@@ -5,7 +5,8 @@ const uid = () => 'd' + Date.now().toString(36) + Math.random().toString(36).sli
 const colors = ['#22d3ee','#a78bfa','#34d399','#fbbf24','#f472b6','#60a5fa'];
 const demo = document.documentElement.dataset.demo === 'true';
 let state, view='all', previewId=null, dragged=null, notesDirty=false, queue=Promise.resolve(), toastTimer, updateTimer;
-let demoState;
+let demoState, bulkRows=[];
+const layouts=['compact','cards','table','tv'];
 const starterApps = [
  ['Plex',32400,'/web','▶','Your movies, TV and music.'],['Sonarr',8989,'','S','Your TV library and series.'],
  ['Radarr',7878,'','R','Your movie collection.'],['Prowlarr',9696,'','P','Your indexers in one place.'],
@@ -36,7 +37,7 @@ async function demoApi(path,method,body) {
   demoState=saved?.schema===1?saved:await (await fetch('seed.json')).json();
  }
  const persist=()=>{localStorage.setItem('bhxuk-dash-demo-v1',JSON.stringify(demoState));};
- if(path==='health')return {version:'1.0.0',status:'ok'};
+ if(path==='health')return {version:'1.1.0',status:'ok'};
  if(path==='state' && method==='GET')return structuredClone(demoState);
  if(path==='state' && method==='PUT') {
   if(body.revision!==demoState.revision)throw new Error('This demo changed in another tab. Reload to continue.');
@@ -51,7 +52,7 @@ async function demoApi(path,method,body) {
  }
  if(path==='backup')return {filename:'Demo changes are stored in this browser. Use Export backup to download them.'};
  if(path==='changelog')return {text:await(await fetch('CHANGELOG.md')).text()};
- if(path.startsWith('updates'))return {current:'1.0.0',latest:'1.0.0',available:false,canUpdate:false,reason:'The demo runs in your browser. Install Docker on your server to use updates.',state:'idle',log:[]};
+ if(path.startsWith('updates'))return {current:'1.1.0',latest:'1.1.0',available:false,canUpdate:false,reason:'The demo runs in your browser. Install Docker on your server to use updates.',state:'idle',log:[]};
  throw new Error('Unavailable in demo.');
 }
 function toast(message) {
@@ -77,7 +78,9 @@ function applyAppearance() {
  const s=state.settings;
  document.body.dataset.theme=s.theme;document.body.dataset.background=s.background;
  document.documentElement.style.setProperty('--accent',colors.includes(s.accent)?s.accent:colors[0]);
- document.body.classList.toggle('compact',s.compact);
+ const layout=layouts.includes(s.layout)?s.layout:'compact';
+ document.body.dataset.layout=layout;document.body.classList.toggle('compact',layout==='compact');
+ $('layoutSelect').value=layout;
  $('dashboardName').textContent=s.name==='My dashboard'?'Your favourite places, all in one space.':s.name;
  document.title='Dash · '+s.name;
 }
@@ -109,12 +112,19 @@ function visibleLinks() {
  else if(mode==='recent'||(mode==='manual'&&view==='recent'))links.sort((a,b)=>b.lastVisited-a.lastVisited);
  return links;
 }
+function cardMarkup(l) {return `<article class="link-card" draggable="true" data-id="${esc(l.id)}" style="--card-accent:${colors.includes(l.color)?l.color:colors[0]}">${document.body.dataset.layout==='tv'&&l.image?`<img class="tv-art" src="${esc(l.image)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:''}<div class="card-top"><span class="app-icon">${esc(l.icon||l.name.slice(0,2).toUpperCase())}</span><button class="pin ${l.pinned?'on':''}" data-action="pin" aria-label="${l.pinned?'Unpin':'Pin'} ${esc(l.name)}" title="${l.pinned?'Unpin':'Pin to favourites'}">${l.pinned?'★':'☆'}</button></div><a class="link-main" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-action="open"><h3>${esc(l.name)}<span>↗</span></h3><p>${esc(l.description||hostname(l.url))}</p></a><div class="card-bottom"><button class="drag-handle" data-action="edit" aria-label="Edit ${esc(l.name)}" title="Drag card to reorder · click to edit">⠿</button><small>${esc(hostname(l.url))}</small><button class="move" data-action="up" aria-label="Move ${esc(l.name)} earlier" title="Move earlier">↑</button><button class="move" data-action="down" aria-label="Move ${esc(l.name)} later" title="Move later">↓</button><button data-action="preview" aria-label="Preview ${esc(l.name)}" title="Preview link">◉</button><button data-action="edit" aria-label="Edit ${esc(l.name)}" title="Edit link">⋯</button></div></article>`;}
+function tableMarkup(links) {
+ return `<div class="link-table-wrap"><table class="link-table"><thead><tr><th>Name</th><th>URL</th><th>Category</th><th>Opened</th><th>Actions</th></tr></thead><tbody>${links.map(l=>`<tr data-id="${esc(l.id)}" draggable="true" style="--card-accent:${colors.includes(l.color)?l.color:colors[0]}"><td><div class="table-name"><span class="app-icon">${esc(l.icon||l.name.slice(0,2).toUpperCase())}</span><a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-action="open">${esc(l.name)}</a><button class="pin ${l.pinned?'on':''}" data-action="pin" aria-label="${l.pinned?'Unpin':'Pin'} ${esc(l.name)}">${l.pinned?'★':'☆'}</button></div></td><td><a class="table-url" href="${esc(l.url)}" title="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-action="open">${esc(l.url)}</a></td><td><span class="table-category">${esc(state.categories.find(c=>c.id===l.category)?.name)}</span></td><td class="table-number">${l.visits}</td><td><div class="table-actions"><button class="iconbtn" data-action="preview" aria-label="Preview ${esc(l.name)}" title="Preview">◉</button><button class="iconbtn" data-action="edit" aria-label="Edit ${esc(l.name)}" title="Edit">⋯</button><button class="iconbtn" data-action="up" aria-label="Move ${esc(l.name)} earlier" title="Move earlier">↑</button><button class="iconbtn" data-action="down" aria-label="Move ${esc(l.name)} later" title="Move later">↓</button></div></td></tr>`).join('')}</tbody></table></div>`;
+}
 function renderLinks() {
  const links=visibleLinks();
  const titles={all:'All links',pinned:'Favourites',frequent:'Frequently used',recent:'Recently opened'};
  $('viewTitle').innerHTML=esc(titles[view]||state.categories.find(c=>c.id===view)?.name||'All links')+` <span class="count">${links.length}</span>`;
  $('viewEyebrow').textContent=$('search').value?'A LITTLE LESS SEARCHING':'YOUR SPACE, CONNECTED';
- $('linkGrid').innerHTML=links.map(l=>`<article class="link-card" draggable="true" data-id="${esc(l.id)}" style="--card-accent:${colors.includes(l.color)?l.color:colors[0]}"><div class="card-top"><span class="app-icon">${esc(l.icon||l.name.slice(0,2).toUpperCase())}</span><button class="pin ${l.pinned?'on':''}" data-action="pin" aria-label="${l.pinned?'Unpin':'Pin'} ${esc(l.name)}" title="${l.pinned?'Unpin':'Pin to favourites'}">${l.pinned?'★':'☆'}</button></div><a class="link-main" href="${esc(l.url)}" target="_blank" rel="noopener noreferrer" data-action="open"><h3>${esc(l.name)}<span>↗</span></h3><p>${esc(l.description||hostname(l.url))}</p></a><div class="card-bottom"><button class="drag-handle" data-action="edit" aria-label="Edit ${esc(l.name)}" title="Drag card to reorder · click to edit">⠿</button><small>${esc(hostname(l.url))}</small><button class="move" data-action="up" aria-label="Move ${esc(l.name)} earlier" title="Move earlier">↑</button><button class="move" data-action="down" aria-label="Move ${esc(l.name)} later" title="Move later">↓</button><button data-action="preview" aria-label="Preview ${esc(l.name)}" title="Preview link">◉</button><button data-action="edit" aria-label="Edit ${esc(l.name)}" title="Edit link">⋯</button></div></article>`).join('');
+ const layout=document.body.dataset.layout;
+ $('linkGrid').innerHTML=layout==='table'?tableMarkup(links):layout==='tv'?state.categories.map(c=>{
+  const group=links.filter(l=>l.category===c.id);return group.length?`<section class="tv-shelf"><div class="tv-shelf-heading"><h3>${esc(c.name)}</h3><span>${group.length} shortcuts</span></div><div class="tv-tiles">${group.map(cardMarkup).join('')}</div></section>`:'';
+ }).join(''):links.map(cardMarkup).join('');
  $('empty').hidden=!!links.length;
  $('emptyText').textContent=$('search').value?'No matches. Try a different search.':view==='frequent'||view==='recent'?'Open a saved link and it will appear here.':'Add a link to make this space yours.';
  $('emptyAdd').hidden=!!$('search').value||view==='recent'||view==='frequent';
@@ -154,7 +164,7 @@ function categories() {
  $('categoryList').innerHTML=state.categories.map(c=>`<div class="category-row" data-id="${esc(c.id)}"><input value="${esc(c.name)}" maxlength="40" aria-label="Rename category ${esc(c.name)}"><span class="count">${state.links.filter(l=>l.category===c.id).length}</span><button class="iconbtn" data-category-action="up" aria-label="Move category up">↑</button><button class="iconbtn" data-category-action="down" aria-label="Move category down">↓</button><button class="iconbtn danger" data-category-action="delete" aria-label="Delete category ${esc(c.name)}">×</button></div>`).join('');
 }
 function showSettings(tab='appearance') {
- const s=state.settings;$('settingName').value=s.name;$('settingTheme').value=s.theme;$('settingBackground').value=s.background;$('settingTimezone').value=s.timezone;$('settingSeconds').checked=s.seconds;$('settingCompact').checked=s.compact;
+ const s=state.settings;$('settingName').value=s.name;$('settingTheme').value=s.theme;$('settingBackground').value=s.background;$('settingTimezone').value=s.timezone;$('settingSeconds').checked=s.seconds;$('settingLayout').value=s.layout||'compact';
  $('settingAccent').innerHTML=$('linkColor').innerHTML;$('settingAccent').value=s.accent;
  settingsTab(tab);openDialog('settingsDialog');
 }
@@ -208,7 +218,15 @@ function events() {
  }catch(e){toast(e.message);}};
  $('deleteLink').onclick=async()=>{const id=$('linkId').value;if(!confirm('Delete this saved link?'))return;try{await save(s=>{s.links=s.links.filter(l=>l.id!==id);},'Link deleted.');if(previewId===id){previewId=null;$('previewContent').innerHTML='<div class="preview-placeholder"><b>Ready for another link.</b><p>Select a preview button on a card.</p></div>';}closeDialog($('editor'));}catch{}};
  $('themeToggle').onclick=()=>save(s=>{s.settings.theme=s.settings.theme==='dark'?'light':'dark';}).catch(()=>{});
- $('compactToggle').onclick=()=>save(s=>{s.settings.compact=!s.settings.compact;}).catch(()=>{});
+ $('layoutSelect').onchange=e=>{const layout=e.target.value;save(s=>{s.settings.layout=layout;s.settings.compact=layout==='compact';}).catch(()=>{});};
+ $('fullScreen').onclick=async()=>{try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{toast('Fullscreen is unavailable in this browser.');}};
+ document.addEventListener('keydown',e=>{
+  if(document.body.dataset.layout!=='tv'||document.querySelector('dialog[open]')||!['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))return;
+  if(!document.activeElement.matches('.link-main'))return;
+  const current=document.activeElement.getBoundingClientRect(),cx=current.left+current.width/2,cy=current.top+current.height/2;
+  const candidates=[...$('linkGrid').querySelectorAll('.link-main')].filter(el=>el!==document.activeElement).map(el=>{const r=el.getBoundingClientRect();return {el,dx:r.left+r.width/2-cx,dy:r.top+r.height/2-cy};}).filter(p=>e.key==='ArrowRight'?p.dx>10&&Math.abs(p.dy)<50:e.key==='ArrowLeft'?p.dx<-10&&Math.abs(p.dy)<50:e.key==='ArrowDown'?p.dy>30:p.dy<-30).sort((a,b)=>e.key==='ArrowLeft'||e.key==='ArrowRight'?Math.abs(a.dx)-Math.abs(b.dx):(Math.abs(a.dy)+Math.abs(a.dx)*.5)-(Math.abs(b.dy)+Math.abs(b.dx)*.5));
+  if(candidates[0]){e.preventDefault();candidates[0].el.focus();candidates[0].el.scrollIntoView({block:'nearest',inline:'nearest',behavior:'smooth'});}
+ });
  $('addCategory').onclick=$('manageCategories').onclick=()=>{categories();openDialog('categoryDialog');};
  $('categoryForm').onsubmit=async e=>{e.preventDefault();const name=$('categoryName').value.trim();if(!name)return;try{await save(s=>{s.categories.push({id:uid(),name,icon:'◈'});},'Category added.');$('categoryName').value='';categories();}catch{}};
  $('categoryList').addEventListener('change',async e=>{if(e.target.tagName!=='INPUT')return;const id=e.target.closest('[data-id]').dataset.id,name=e.target.value.trim();try{await save(s=>{s.categories.find(c=>c.id===id).name=name;},'Category renamed.');categories();}catch{}});
@@ -224,14 +242,52 @@ function events() {
  $('tasks').addEventListener('click',e=>{const b=e.target.closest('button'),id=b?.closest('[data-id]')?.dataset.id;if(id)save(s=>{s.tasks=s.tasks.filter(t=>t.id!==id);}).catch(()=>{});});
  $('openSettings').onclick=()=>showSettings();
  document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>settingsTab(b.dataset.tab));
- $('settingsForm').onsubmit=async e=>{e.preventDefault();try{new Intl.DateTimeFormat('en-GB',{timeZone:$('settingTimezone').value});await save(s=>{s.settings={name:$('settingName').value.trim(),theme:$('settingTheme').value,background:$('settingBackground').value,timezone:$('settingTimezone').value.trim(),accent:$('settingAccent').value,seconds:$('settingSeconds').checked,compact:$('settingCompact').checked};},'Preferences saved.');}catch(e){toast(e.message);}};
+ $('settingsForm').onsubmit=async e=>{e.preventDefault();try{new Intl.DateTimeFormat('en-GB',{timeZone:$('settingTimezone').value});await save(s=>{s.settings={name:$('settingName').value.trim(),theme:$('settingTheme').value,background:$('settingBackground').value,timezone:$('settingTimezone').value.trim(),accent:$('settingAccent').value,seconds:$('settingSeconds').checked,layout:$('settingLayout').value,compact:$('settingLayout').value==='compact'};},'Preferences saved.');}catch(e){toast(e.message);}};
  $('exportData').onclick=exportBackup;$('importButton').onclick=()=>$('importFile').click();
  $('importFile').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>4*1024*1024)throw new Error('Maximum backup size is 4 MB.');const imported=JSON.parse(await f.text());if(imported.schema!==1)throw new Error('Choose a valid Dash JSON backup.');if(!confirm('Replace this dashboard with the backup? A server snapshot will be made first.'))return;await api('backup','POST',{});await save(s=>{const rev=s.revision;Object.keys(s).forEach(k=>delete s[k]);Object.assign(s,imported,{revision:rev});},'Dashboard imported.');notesDirty=false;previewId=null;$('previewContent').innerHTML='<div class="preview-placeholder"><b>Your space is restored.</b><p>Select a link preview to see more.</p></div>';view='all';render();closeDialog($('settingsDialog'));}catch(e){toast(e.message);}finally{$('importFile').value='';}};
  $('backupData').onclick=async()=>{try{const r=await api('backup','POST',{});toast(demo?r.filename:'Snapshot created: '+r.filename);}catch(e){toast(e.message);}};
  $('checkUpdates').onclick=()=>loadUpdates(true);
  $('applyUpdate').onclick=async()=>{try{await queue;$('applyUpdate').hidden=true;const u=await api('updates/apply','POST',{});showUpdate(u);let ticks=0;clearInterval(updateTimer);updateTimer=setInterval(async()=>{ticks++;try{const [health,next]=await Promise.all([api('health'),api('updates')]);showUpdate(next);if(next.state==='error'){clearInterval(updateTimer);return;}if(health.version!==u.current||next.recovery?.status==='rolled_back'&&next.state==='idle'){clearInterval(updateTimer);location.reload();}}catch{}if(ticks>120){clearInterval(updateTimer);error('Dash has not reconnected yet. Check docker compose logs dash, then reload this page.');}},1500);}catch(e){toast(e.message);loadUpdates();}};
+ bulkEvents();
  $('starterButton').onclick=()=>{$('starterHost').value=demo?'server.local':location.hostname;$('starterOptions').innerHTML=starterApps.map(([name,port],i)=>`<label class="starter-choice"><input type="checkbox" value="${i}" ${i<3||i===7?'checked':''}><span>${esc(name)}<small>Port ${port}</small></span></label>`).join('');openDialog('starterDialog');};
  $('starterForm').onsubmit=async e=>{e.preventDefault();try{let host=$('starterHost').value.trim();if(host.includes(':')&&!host.startsWith('['))host='['+host+']';const base=new URL('http://'+host);if(base.pathname!=='/'||base.port||base.username||base.password||base.search||base.hash)throw new Error('Enter a server IP or hostname, without a port or path.');const selected=[...$('starterOptions').querySelectorAll('input:checked')].map(x=>starterApps[Number(x.value)]);if(!selected.length)throw new Error('Select at least one app.');await save(s=>{let cat=s.categories.find(c=>c.id==='homelab'||c.name.toLowerCase()==='homelab');if(!cat){cat={id:uid(),name:'Homelab',icon:'▣'};s.categories.push(cat);}selected.forEach(([name,port,path,icon,description],i)=>{const url=(port===9443?'https://':'http://')+host+':'+port+path;if(!s.links.some(l=>l.url===url))s.links.push({id:uid(),name,url,icon,description,category:cat.id,color:colors[i%6],pinned:true,image:'',visits:0,lastVisited:0});});},'Homelab shortcuts added. Edit any card to change its port.');closeDialog($('starterDialog'));view='all';render();}catch(e){toast(e.message);}};
+}
+function openBulk() {
+ $('bulkCategory').innerHTML=state.categories.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+ if(state.categories.some(c=>c.id===view))$('bulkCategory').value=view;
+ $('bulkText').value='';$('shortcutFiles').value='';bulkRows=[];renderBulk();openDialog('bulkDialog');
+}
+function renderBulk() {
+ const ready=bulkRows.filter(r=>r.status==='ready'),selected=ready.filter(r=>r.selected).length;
+ $('bulkSummary').hidden=!bulkRows.length;$('bulkReview').hidden=!bulkRows.length;
+ $('bulkSummary').textContent=`${selected} selected · ${bulkRows.filter(r=>r.status==='duplicate').length} duplicates skipped · ${bulkRows.filter(r=>r.status==='invalid').length} invalid. Import adds links to your dashboard; existing links stay in place.`;
+ $('applyBulk').disabled=!selected;$('applyBulk').textContent=selected?`Import ${selected} link${selected===1?'':'s'}`:'Import selected links';
+ $('bulkSelectAll').checked=!!ready.length&&selected===ready.length;$('bulkSelectAll').indeterminate=selected>0&&selected<ready.length;
+ const fallback=state.categories.find(c=>c.id===$('bulkCategory').value)?.name||state.categories[0].name;
+ $('bulkRows').innerHTML=bulkRows.map((r,i)=>`<tr class="import-${r.status}"><td><input type="checkbox" data-bulk-index="${i}" aria-label="Import ${esc(r.name||r.url)}" ${r.selected?'checked':''} ${r.status==='ready'?'':'disabled'}></td><td>${esc(r.name||r.source||'Unnamed link')}</td><td class="import-url">${esc(r.url)}</td><td>${esc(r.category||fallback)}</td><td><span class="import-status">${r.status==='ready'?'Ready':r.status==='duplicate'?'Duplicate':'Invalid'}</span>${r.error?`<small>${esc(r.error)}</small>`:''}</td></tr>`).join('');
+}
+function reviewBulk(rows) {if(rows.length>2000)throw new Error('Import at most 2,000 rows at a time.');bulkRows=DashImport.review(rows,state.links);renderBulk();}
+function bulkEvents() {
+ $('bulkImport').onclick=openBulk;
+ $('reviewBulk').onclick=()=>{try{if(new Blob([$('bulkText').value]).size>4*1024*1024)throw new Error('Maximum pasted text size is 4 MB.');const rows=DashImport.parse($('bulkText').value);if(!rows.length)throw new Error('Paste a link list first.');reviewBulk(rows);}catch(e){toast(e.message);}};
+ $('chooseShortcutFiles').onclick=()=>$('shortcutFiles').click();
+ $('shortcutFiles').onchange=async e=>{const button=$('chooseShortcutFiles');button.disabled=true;try{const files=[...e.target.files];if(!files.length)return;if(files.reduce((n,f)=>n+f.size,0)>4*1024*1024)throw new Error('Keep the combined files under 4 MB.');if(files.length>2000)throw new Error('Choose at most 2,000 shortcut files.');const rows=[];for(const f of files){if(/\.lnk$/i.test(f.name)){rows.push(...DashImport.parse('',f.name));continue;}const bytes=new Uint8Array(await f.arrayBuffer());rows.push(...DashImport.parse(DashImport.decode(bytes),f.name));if(rows.length>2000)throw new Error('Import at most 2,000 rows at a time.');}reviewBulk(rows);}catch(e){toast(e.message);}finally{button.disabled=false;$('shortcutFiles').value='';}};
+ $('bulkRows').onchange=e=>{if(e.target.dataset.bulkIndex!==undefined){bulkRows[Number(e.target.dataset.bulkIndex)].selected=e.target.checked;renderBulk();}};
+ $('bulkSelectAll').onchange=e=>{bulkRows.filter(r=>r.status==='ready').forEach(r=>r.selected=e.target.checked);renderBulk();};
+ $('bulkCategory').onchange=renderBulk;
+ $('applyBulk').onclick=async()=>{
+  const button=$('applyBulk'),selected=bulkRows.filter(r=>r.status==='ready'&&r.selected),fallback=$('bulkCategory').value,pinned=$('bulkPinned').checked;
+  if(!selected.length)return;button.disabled=true;let added=0;
+  try{await queue;await api('backup','POST',{});await save(s=>{
+   const seen=new Set(s.links.map(l=>DashImport.canonical(l.url)));
+   for(const r of selected){if(seen.has(r.url))continue;if(s.links.length>=2000)throw new Error('The dashboard supports 2,000 saved links. Nothing was imported.');
+    let category=s.categories.find(c=>c.id===fallback)||s.categories[0];
+    if(r.category){category=s.categories.find(c=>c.name.toLowerCase()===r.category.toLowerCase());if(!category){if(s.categories.length>=50)throw new Error('The import would exceed 50 categories. Nothing was imported.');category={id:uid(),name:r.category,icon:'◈'};s.categories.push(category);}}
+    s.links.push({id:uid(),name:r.name,url:r.url,category:category.id,description:r.description,icon:r.name.slice(0,2).toUpperCase(),color:colors[added%colors.length],pinned,image:'',visits:0,lastVisited:0});seen.add(r.url);added++;
+   }
+  });toast(`${added} link${added===1?'':'s'} imported. Existing links kept.`);closeDialog($('bulkDialog'));view='all';$('search').value='';render();
+  }catch(e){toast(e.message);renderBulk();}
+ };
 }
 async function boot() {
  if(demo){$('demoBanner').hidden=false;$('connection').textContent='BROWSER DEMO';$('saveState').textContent='Demo · stored in this browser';$('noteStatus').textContent='Saved in this browser';}

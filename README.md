@@ -21,6 +21,8 @@ check the time, jot down a note and get on with your day. Inspired by [HomeLabSt
 | Dashboard | Dark navy panels, cyan accents, a sidebar, responsive cards and a light theme |
 | Clock & date | UK date formatting, configurable main time zone, optional seconds, New York / UTC / Tokyo clocks |
 | Links & apps | Add, edit, delete, pin, categorise and search your own shortcuts |
+| Bulk import | Paste URL lists, named lists, CSV/TSV and Markdown, or select .url / .webloc / text / HTML bookmark files; preview, deduplicate and choose categories |
+| Layouts | Smaller compact cards by default, classic cards, table/list rows and an Android TV-inspired launcher with category shelves and keyboard navigation |
 | Organisation | Custom order, drag and drop, keyboard move buttons, alphabetical / frequent / recent sorting |
 | Previews | Details panel, your own preview image URL and an optional sandboxed live website preview |
 | Homelab starter | Editable server address and presets for Plex, Sonarr, Radarr, Prowlarr, Bazarr, qBittorrent, Seerr, HomeLabStats, ROMM and Portainer |
@@ -42,7 +44,7 @@ cd Dash
 bash install.sh
 ```
 
-The installer creates `data/` and a `.env` file, sets the checkout owner's UID/GID, detects the server's LAN IP and builds/starts the container. Check the printed LAN address. Open **http://<your-server-ip>:8088** using that address.
+The installer creates `data/` and a `.env` file, sets the checkout owner's UID/GID, detects the server's LAN IP and builds/starts the container. Check the printed LAN address. Open **`http://<your-server-ip>:8088`** using that address.
 
 ### Manual Docker Compose setup
 
@@ -72,6 +74,29 @@ The container runs as the configured UID/GID. Your checkout and data folder must
 Most websites block embedded viewing or require cookies that do not work in frames. Dash always provides a direct Open website link. Preview images are optional URLs you supply; Dash does not capture screenshots, proxy private websites or copy their login sessions. Local HTTPS apps with self-signed certificates may need to be opened directly first.
 
 Notes are saved by clicking **Save note**. Dash warns before leaving with unsaved note changes. If another browser has edited the dashboard, reload before saving; the existing data is protected from silent overwrites.
+
+## Bulk import & layouts
+
+Click **Bulk import** beside Add link. Paste one URL per line or a named list:
+
+```text
+Plex | http://server.local:32400/web | Media
+GitHub | https://github.com | Tools
+https://example.com
+```
+
+Choose **Review pasted links**, or **Choose files** for multiple Windows Internet Shortcut (`.url`), Mac `.webloc`, `.txt`, `.csv`, `.tsv`, `.md` or HTML bookmarks exports. CSV/TSV can include Name, URL, Category and Description headers. UTF-8 and BOM-marked UTF-16 shortcut files are supported.
+
+The review table flags invalid URLs and duplicates. Select the links to add, choose a default category and optionally pin them. Named categories are matched case-insensitively or created. Import appends links, keeps existing content and makes a server snapshot first. Limits: 4 MB per import, 2,000 links and 50 categories in the dashboard. Windows desktop `.lnk` files are identified and skipped; use `.url` shortcuts for website addresses.
+
+Use the **layout selector** above your links, or **Settings → Appearance → Layout**:
+
+- **Compact:** smaller cards with short descriptions, designed for lots of links. This is the new default.
+- **Cards:** the original card layout, with reduced padding.
+- **Table / list:** one row per link, with Name, URL, Category, Opened and action columns.
+- **TV launcher:** wide tiles in horizontal category shelves. Tab to a link, use the arrow keys to move between tiles, and Enter to open it. Optional preview images become tile artwork. Use the fullscreen button for a cleaner launcher screen.
+
+Layouts preserve the same links, favourites, search, previews and sorting. The TV design is inspired by a TV launcher; it runs in your browser.
 
 ## Updates
 
@@ -136,6 +161,7 @@ docker compose restart dash
 
 ```bash
 python3 -m unittest discover -s tests -v
+node --test tests/importer.test.cjs
 DATA_DIR=./data PORT=8088 python3 -m app.main
 python3 scripts/build_pages.py
 ```

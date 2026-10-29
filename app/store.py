@@ -78,6 +78,9 @@ def validate(raw):
         raise ValueError('Unknown time zone') from None
     if s.get('theme', 'dark') not in ('dark', 'light') or s.get('background', 'aurora') not in ('aurora', 'plain', 'grid'):
         raise ValueError('Invalid theme or background')
+    layout = s.get('layout', 'compact')
+    if layout not in ('cards', 'compact', 'table', 'tv'):
+        raise ValueError('Choose cards, compact, table or TV layout')
     notes = text(raw.get('notes', ''), 20000)
     tasks = raw.get('tasks', [])
     if not isinstance(tasks, list) or len(tasks) > 100:
@@ -91,7 +94,7 @@ def validate(raw):
             'settings': {'name': text(s.get('name', 'My dashboard'), 60), 'timezone': zone,
                 'theme': s.get('theme', 'dark'), 'background': s.get('background', 'aurora'),
                 'accent': s.get('accent') if s.get('accent') in COLORS else COLORS[0],
-                'compact': bool(s.get('compact', False)), 'seconds': bool(s.get('seconds', False))}}
+                'layout': layout, 'compact': layout == 'compact', 'seconds': bool(s.get('seconds', False))}}
 
 def initial():
     categories = [{'id': 'everyday', 'name': 'Everyday', 'icon': '◈'}, {'id': 'homelab', 'name': 'Homelab', 'icon': '▣'},
