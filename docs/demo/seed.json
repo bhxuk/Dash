@@ -65,7 +65,7 @@
     {
       "id": "demo-link-0",
       "name": "GitHub",
-      "url": "https://github.com/bhxuk",
+      "url": "https://github.com",
       "description": "Your repositories and projects.",
       "category": "everyday",
       "icon": "GH",
@@ -162,7 +162,22 @@
     "accent": "#22d3ee",
     "layout": "compact",
     "compact": true,
-    "seconds": false
+    "seconds": false,
+    "clocks": [
+      "America/New_York",
+      "UTC",
+      "Asia/Tokyo"
+    ]
+  },
+  "home": {
+    "favourites": [
+      "camera.front_door",
+      "light.living_room_lamp",
+      "media_player.living_room_speaker",
+      "climate.thermostat"
+    ],
+    "hidden": [],
+    "cameraInterval": 10
   },
   "revision": 1
 }

@@ -10,7 +10,9 @@ from app.store import initial, COLORS
 def build():
     demo = root / 'docs/demo'
     demo.mkdir(parents=True, exist_ok=True)
-    for name in ['app.css', 'app.js', 'importer.js', 'icon.svg']:
+    shutil.rmtree(demo / 'js', ignore_errors=True)
+    shutil.copytree(root / 'app/static/js', demo / 'js')
+    for name in ['app.css', 'icon.svg']:
         shutil.copyfile(root / 'app/static' / name, demo / name)
     html = (root / 'app/static/index.html').read_text().replace('<html lang="en">', '<html lang="en" data-demo="true">')
     (demo / 'index.html').write_text(html)
@@ -27,6 +29,7 @@ def build():
     seed['links'] = seed['links'][-3:] + seed['links'][:-3]
     seed['notes'] = 'A home for the things I use every day.\n\n→ Check the server backups\n→ Add a few more favourite links'
     seed['tasks'] = [{'id':'demo-task-1','text':'Make this space my own','done':False},{'id':'demo-task-2','text':'One place for all my apps','done':True}]
+    seed['home']['favourites'] = ['camera.front_door', 'light.living_room_lamp', 'media_player.living_room_speaker', 'climate.thermostat']
     seed['revision'] = 1
     (demo / 'seed.json').write_text(json.dumps(seed, ensure_ascii=False, indent=2) + '\n')
     (root / 'docs/.nojekyll').touch()

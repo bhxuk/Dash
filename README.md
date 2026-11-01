@@ -2,7 +2,7 @@
 
 # `▦` Dash
 
-**Your links. Your apps. Your everyday launchpad.**
+**Your links. Your apps. Your smart home. Your everyday launchpad.**
 
 A modern personal dashboard for your local network. Save your favourite sites, organise your homelab,
 check the time, jot down a note and get on with your day. Inspired by [HomeLabStats](https://github.com/bhxuk/HomeLabStats).
@@ -21,18 +21,20 @@ check the time, jot down a note and get on with your day. Inspired by [HomeLabSt
 | Dashboard | Dark navy panels, cyan accents, a sidebar, responsive cards and a light theme |
 | Clock & date | UK date formatting, configurable main time zone, optional seconds, New York / UTC / Tokyo clocks |
 | Links & apps | Add, edit, delete, pin, categorise and search your own shortcuts |
+| Smart home | Lights, Google Nest speakers and Chromecasts, thermostats, plugs, sensors and scenes through Home Assistant, grouped by room |
+| Cameras | Live-refreshing snapshots and a full-screen live view for Aqara and other Home Assistant cameras |
 | Bulk import | Paste URL lists, named lists, CSV/TSV and Markdown, or select .url / .webloc / text / HTML bookmark files; preview, deduplicate and choose categories |
 | Layouts | Smaller compact cards by default, classic cards, table/list rows and an Android TV-inspired launcher with category shelves and keyboard navigation |
 | Organisation | Custom order, drag and drop, keyboard move buttons, alphabetical / frequent / recent sorting |
 | Previews | Details panel, your own preview image URL and an optional sandboxed live website preview |
-| Homelab starter | Editable server address and presets for Plex, Sonarr, Radarr, Prowlarr, Bazarr, qBittorrent, Seerr, HomeLabStats, ROMM and Portainer |
+| Homelab starter | One-click shortcuts for Plex, the *arr apps, qBittorrent, Seerr, Tautulli, Home Assistant, Portainer, Glances, ROMM, PDFDing and more, with editable ports |
 | Everyday extras | Quick notes with an explicit Save button, and a small task list |
 | Appearance | Dark/light theme, six accent colours, three backgrounds and compact cards |
 | Data | Server-side JSON storage, export/import, snapshots and conflict detection across browser tabs |
 | Updates | Published-release checks, changelog, one-click update, pre-update validation and backup, automatic code rollback if startup fails |
 
 **No login. No cloud account. No Docker socket. No frontend build step.**
-One Python service with no third-party Python packages. Links and settings live in `./data/dashboard.json`, outside the source tree tracked by Git.
+One Python service with no third-party Python packages. Links and settings live in `./data/dashboard.json` and the Home Assistant connection in `./data/homeassistant.json`, outside the source tree tracked by Git.
 
 ## Install
 
@@ -65,19 +67,34 @@ The container runs as the configured UID/GID. Your checkout and data folder must
 
 ### First run
 
-1. Choose **Add link** for your websites, or **Bring your homelab together** for app presets.
-2. Set the app server IP, choose the apps you use and add them. Ports are editable defaults, not auto-discovered services.
-3. Use **Manage categories** to create and rename groups. A category must be empty before deletion.
-4. Click a link name to open it immediately. Click **◉** for details or **Live preview** to try embedding it.
-5. Use **Settings & updates** for appearance, data exports and updates. Press `/` to focus search.
+1. Choose **Add a link**, **Import bookmarks** (any browser's bookmark export works) or **Add server apps** for your homelab.
+2. For server apps, enter the server IP, tick the apps you run and check the ports. Ports are editable defaults, not auto-discovered services.
+3. Use **+** beside Categories to create, rename, re-icon, reorder or delete groups. Deleting a category moves its links to another one.
+4. Click a link to open it. Hover a link for ☆ pin, ◉ preview and ✎ edit.
+5. Connect Home Assistant under **Settings & updates → Smart home** (see below).
+6. Press `/` to search links and devices, and `n` to add a link.
 
 Most websites block embedded viewing or require cookies that do not work in frames. Dash always provides a direct Open website link. Preview images are optional URLs you supply; Dash does not capture screenshots, proxy private websites or copy their login sessions. Local HTTPS apps with self-signed certificates may need to be opened directly first.
 
 Notes are saved by clicking **Save note**. Dash warns before leaving with unsaved note changes. If another browser has edited the dashboard, reload before saving; the existing data is protected from silent overwrites.
 
+## Smart home (lights, Aqara cameras, Google devices)
+
+Dash controls devices **through Home Assistant**, so your devices need to be added there first. Home Assistant talks to almost everything; Dash gives you a fast, tidy control panel on top.
+
+1. **Add your devices to Home Assistant** (Settings → Devices & services):
+   - **Google Nest speakers, Nest Hubs, Chromecasts:** usually discovered automatically as *Google Cast*. Click **Configure**. Nest thermostats and Nest cameras use the *Google Nest* integration.
+   - **Aqara cameras and hubs (G2H Pro, G3, G5, M2, M3):** use the *HomeKit Device* integration with the HomeKit code on the device (the M3 also supports *Matter*). For smoother live video, turn on **RTSP LAN preview** in the Aqara Home app and add the `rtsp://` address with the *Generic Camera* integration.
+   - **Smart bulbs:** add your bulb brand's integration (Philips Hue, TP-Link Kasa/Tapo, LIFX, WiZ, Govee, Yeelight, Tuya, IKEA, Matter…).
+2. **Create a token** in Home Assistant: your profile (bottom left) → **Security** → **Long-lived access tokens** → **Create token**.
+3. In Dash open **Settings & updates → Smart home**, enter your Home Assistant address (for example `http://192.168.0.10:8123`) and paste the token. Dash tests the connection before saving.
+4. Open **Smart home → Devices** or **Cameras**. Star ★ any device to pin it to your overview.
+
+The token is stored in `data/homeassistant.json` (readable only by the Dash user), is never sent to the browser and is not part of exports. Dash can only send a fixed set of actions (on/off, brightness, colour, media controls, volume, thermostat temperature and mode, blinds, vacuum, scenes and scripts). Locks and alarms are shown read-only. Anyone on your LAN who can open Dash can switch devices, as with the rest of the dashboard.
+
 ## Bulk import & layouts
 
-Click **Bulk import** beside Add link. Paste one URL per line or a named list:
+Click **Import** beside Add link (or **Import bookmarks** on the overview). Paste one URL per line or a named list:
 
 ```text
 Plex | http://server.local:32400/web | Media

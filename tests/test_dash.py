@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 from app.store import Store, Conflict, initial, validate
 from app.main import Server, Handler, private_ip, allowed_host, VERSION
+from app.homeassistant import HomeAssistant
 from app.updater import Updater, version_tuple
 
 class StorageTests(unittest.TestCase):
@@ -76,6 +77,27 @@ class StorageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.store.save(invalid)
 
+    def test_v1_data_without_new_sections_loads(self):
+        old = self.store.read()
+        old.pop('home')
+        old['settings'].pop('clocks')
+        self.store.path.write_text(json.dumps(old))
+        state = Store(self.temp.name).read()
+        self.assertEqual(state['home'], {'favourites': [], 'hidden': [], 'cameraInterval': 10})
+        self.assertEqual(state['settings']['clocks'], ['America/New_York', 'UTC', 'Asia/Tokyo'])
+        state['home']['favourites'] = ['light.lamp', 'camera.front_door', 'light.lamp']
+        saved = self.store.save(state)
+        self.assertEqual(saved['home']['favourites'], ['light.lamp', 'camera.front_door'])
+        for bad in (['not an id'], 'light.lamp'):
+            state = self.store.read()
+            state['home']['favourites'] = bad
+            with self.assertRaises(ValueError):
+                validate(state)
+        state = self.store.read()
+        state['settings']['clocks'] = ['Mars/Olympus']
+        with self.assertRaises(ValueError):
+            validate(state)
+
     def test_corrupt_storage_is_not_replaced(self):
         self.store.path.write_text('broken')
         with self.assertRaises(ValueError):
@@ -88,6 +110,7 @@ class HttpTests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         cls.server = Server(('127.0.0.1', 0), Handler)
         cls.server.store = Store(cls.temp.name)
+        cls.server.home = HomeAssistant(cls.temp.name)
         cls.server.updater = Updater(Path(__file__).resolve().parents[1], cls.server.store)
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
@@ -140,9 +163,12 @@ class HttpTests(unittest.TestCase):
     def test_static_and_version(self):
         code, html, h = self.request('/')
         self.assertEqual(code, 200)
-        self.assertIn(b'id="clock"', html)
+        self.assertIn(b'js/main.js', html)
         self.assertIn("script-src 'self'", h['Content-Security-Policy'])
-        for path in ['/app.css', '/app.js', '/icon.svg', '/api/changelog', '/api/updates', '/api/health']:
+        code, _, h = self.request('/js/main.js')
+        self.assertEqual(code, 200)
+        self.assertTrue(h['Content-Type'].startswith('text/javascript'))
+        for path in ['/app.css', '/icon.svg', '/js/home.js', '/js/importer.js', '/api/changelog', '/api/updates', '/api/health', '/api/home/config']:
             self.assertEqual(self.request(path)[0], 200, path)
         self.assertEqual(json.loads(self.request('/api/health')[1])['version'], VERSION)
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.0.0] - 2026-11-01
+
+- Rebuilt Dash from the ground up with clean, readable code: modular JavaScript, a rewritten stylesheet and a tidier Python server. Same LAN-only Docker setup and no extra dependencies.
+- New **Smart home** section powered by Home Assistant: lights with brightness, warmth and colour; Google Nest speakers, Nest Hubs and Chromecasts with play/pause, skip, volume and source; Nest and other thermostats; switches, plugs, fans, blinds, vacuums, scenes, scripts and sensors, grouped by room.
+- New **Cameras** view: live-refreshing snapshots of Aqara and other Home Assistant cameras, plus a full-screen live view.
+- Pin any device with ★ to show it on your overview; hide devices you never use.
+- Your Home Assistant token stays on the server (`data/homeassistant.json`, owner-only), is never sent to the browser and is not included in exports. Only a fixed list of safe actions can be sent; locks and alarms are read-only.
+- New overview with greeting, quick actions, favourite devices, favourite links and every category at a glance.
+- “Add server apps” now covers your whole homelab: Plex, Sonarr, Radarr, Prowlarr, Bazarr, qBittorrent, Seerr, Tautulli, Home Assistant, Portainer, Glances, HomeLabStats, Pulse, ROMM, PDFDing, Windows 11, Plex Burner and more, with editable ports.
+- Search covers links and devices. Configurable world clocks. Categories can be renamed, re-iconed, reordered and deleted (links move to another category).
+- Mobile layout with a slide-out menu.
+- Existing links, notes, tasks, settings and backups carry over unchanged. No image rebuild is required; use the in-app updater.
+
 ## [1.1.0] - 2026-10-29
 
 - Bulk-add links by pasting URLs, named pipe-separated lists, CSV/TSV or Markdown links.
