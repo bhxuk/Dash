@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.2.0] - 2026-11-02
+
+- Removed the Tasks panel. The overview now uses the full width, and every category shows all of its links.
+- New status chips (Mushroom style) on the overview and Smart home page: lights on (tap to switch them all off), average temperature and humidity, thermostat, what's playing, motion and open doors/windows.
+- New room cards on the Smart home page: temperature, humidity, lights on and media for each room, with one switch for all the room's lights. Tap a room to jump to its devices.
+- Quick actions moved into a compact button row under the greeting.
+- Existing tasks and notes stay in your data file and backups. Installs automatically.
+
 ## [2.1.0] - 2026-11-02
 
 - Dash now installs new releases automatically. It checks GitHub every hour, backs up your data, updates, and rolls back by itself if the new version fails to start. Turn this off in Settings → Updates.

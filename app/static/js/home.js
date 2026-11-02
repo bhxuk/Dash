@@ -71,6 +71,7 @@ function patchTiles() {
     if (!e || rendered.get(tile) === JSON.stringify(e) || tile.contains(document.activeElement) || tile.matches(':active')) return;
     tile.replaceWith(deviceTile(e));
   });
+  refreshSummaries();
   const stamp = document.getElementById('homeUpdated');
   if (stamp) stamp.textContent = `Live from Home Assistant · updated ${new Date(app.home.updated).toLocaleTimeString('en-GB')}`;
 }
@@ -103,6 +104,7 @@ async function act(entity, action, data) {
     const index = app.home.entities.findIndex(e => e.id === entity.id);
     if (index >= 0) app.home.entities[index] = { ...updated, area: updated.area || entity.area };
     document.querySelectorAll(`[data-entity="${CSS.escape(entity.id)}"]`).forEach(tile => tile.replaceWith(deviceTile(app.home.entities[index])));
+    refreshSummaries();
   } catch (error) {
     toast(error.message, 'error');
   }
@@ -319,10 +321,10 @@ export function homeView() {
     groups.get(key).push(e);
   }
   const sorted = [...groups].sort(([a], [b]) => (a === 'Other devices') - (b === 'Other devices') || a.localeCompare(b));
-  return h('section', { class: 'view' }, head, chips,
+  return h('section', { class: 'view' }, head, statusChips(), filter === 'all' && !app.search ? roomCards() : null, chips,
     !list.length && app.home.updated ? h('div', { class: 'empty' }, h('b', {}, 'No matching devices.'), h('p', {}, 'Try another filter or clear the search.')) : null,
     camerasList.length ? h('section', { class: 'area' }, h('h3', {}, '◉ Cameras'), h('div', { class: 'camera-grid' }, camerasList.map(deviceTile))) : null,
-    sorted.map(([area, items]) => h('section', { class: 'area' }, h('h3', {}, area, h('span', { class: 'count' }, items.length)),
+    sorted.map(([area, items]) => h('section', { class: 'area', id: roomId(area) }, h('h3', {}, area, h('span', { class: 'count' }, items.length)),
       h('div', { class: 'device-grid' }, items.map(deviceTile)))));
 }
 
@@ -353,3 +355,83 @@ export function homeCount() {
   return app.home.entities.filter(e => !app.state.home.hidden.includes(e.id)).length;
 }
 
+
+// ------------------------------------------------------------ summaries
+
+const visible = () => app.home.entities.filter(e => !app.state.home.hidden.includes(e.id));
+const lightsOn = list => list.filter(e => e.domain === 'light' && e.state === 'on');
+const roomId = area => 'room-' + area.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+function average(list, deviceClass) {
+  const values = list.filter(e => e.domain === 'sensor' && e.attributes.device_class === deviceClass)
+    .map(e => parseFloat(e.state)).filter(Number.isFinite);
+  return values.length ? values.reduce((a, b) => a + b, 0) / values.length : null;
+}
+
+/** Switch a group of lights on or off together, then redraw the summaries. */
+async function setLights(lights, turnOn) {
+  await Promise.all(lights.map(e => act(e, turnOn ? 'turn_on' : 'turn_off')));
+  refreshSummaries();
+}
+
+function chip(icon, text, attrs = {}) {
+  return h(attrs.onclick || attrs.href ? (attrs.href ? 'a' : 'button') : 'span', { class: 'status-chip', ...attrs }, h('b', {}, icon), text);
+}
+
+/** Mushroom-style status chips: lights on, temperature, humidity, media, motion and openings. */
+export function statusChips() {
+  if (!app.home.config.configured || !app.home.entities.length) return null;
+  const all = visible();
+  const on = lightsOn(all);
+  const temp = average(all, 'temperature');
+  const humidity = average(all, 'humidity');
+  const playing = all.filter(e => e.domain === 'media_player' && e.state === 'playing');
+  const motion = all.filter(e => e.domain === 'binary_sensor' && ['motion', 'occupancy', 'presence'].includes(e.attributes.device_class) && e.state === 'on');
+  const open = all.filter(e => e.domain === 'binary_sensor' && ['door', 'window', 'opening'].includes(e.attributes.device_class) && e.state === 'on');
+  const climate = all.find(e => e.domain === 'climate' && e.attributes.temperature !== undefined);
+  return h('div', { class: 'status-chips', id: 'statusChips' },
+    on.length
+      ? chip('💡', `${on.length} light${on.length === 1 ? '' : 's'} on · turn off`, { onclick: () => setLights(on, false), title: on.map(e => e.name).join(', ') })
+      : chip('💡', 'All lights off'),
+    temp !== null ? chip('🌡', `${temp.toFixed(1)}°`) : null,
+    humidity !== null ? chip('💧', `${Math.round(humidity)}%`) : null,
+    climate ? chip('♨', `${climate.name} ${climate.attributes.temperature}° · ${climate.state.replace('_', ' ')}`) : null,
+    ...playing.slice(0, 3).map(e => chip('♫', `${e.name}: ${e.attributes.media_title || 'playing'}`, { class: 'status-chip live' })),
+    motion.length ? chip('◌', `Motion: ${motion.map(e => e.area || e.name).join(', ')}`, { class: 'status-chip warn' }) : null,
+    open.length ? chip('🚪', `${open.length} open: ${open.map(e => e.name).join(', ')}`, { class: 'status-chip warn' }) : null);
+}
+
+const ROOM_ICONS = [[/bed|nursery|kid/, '🛏'], [/kitchen|dining/, '🍳'], [/living|lounge|sitting|family/, '🛋'], [/bath|shower|toilet|wc/, '🛁'],
+  [/office|study|desk/, '💻'], [/garden|outside|yard|patio|porch|front|back/, '🌳'], [/hall|landing|stair|entr/, '🚪'], [/garage|drive/, '🚗'], [/laundry|utility/, '🧺']];
+const roomIcon = area => ROOM_ICONS.find(([re]) => re.test(area.toLowerCase()))?.[1] || '⌂';
+
+/** One card per room: climate readings, lights on, and a one-tap lights toggle. */
+export function roomCards() {
+  const rooms = new Map();
+  for (const e of visible()) if (e.area) (rooms.get(e.area) || rooms.set(e.area, []).get(e.area)).push(e);
+  if (!rooms.size) return null;
+  return h('div', { class: 'room-grid', id: 'roomCards' }, [...rooms].sort(([a], [b]) => a.localeCompare(b)).map(([area, items]) => {
+    const lights = items.filter(e => e.domain === 'light' && !unavailable(e));
+    const on = lightsOn(lights);
+    const temp = average(items, 'temperature');
+    const humidity = average(items, 'humidity');
+    const media = items.find(e => e.domain === 'media_player' && e.state === 'playing');
+    return h('article', { class: 'room-card' + (on.length ? ' lit' : '') },
+      h('a', { class: 'room-main', href: '#home', onclick: ev => { ev.preventDefault(); document.getElementById(roomId(area))?.scrollIntoView({ behavior: 'smooth' }); } },
+        h('span', { class: 'room-icon' }, roomIcon(area)),
+        h('span', { class: 'device-text' }, h('b', {}, area),
+          h('small', {}, [temp !== null ? `${temp.toFixed(1)}°` : null, humidity !== null ? `${Math.round(humidity)}%` : null,
+            lights.length ? `${on.length}/${lights.length} lights` : null, media ? '♫ playing' : null, `${items.length} device${items.length === 1 ? '' : 's'}`].filter(Boolean).join(' · ')))),
+      lights.length ? h('button', { class: 'switch-btn', 'aria-label': `${on.length ? 'Turn off' : 'Turn on'} lights in ${area}`,
+        onclick: () => setLights(on.length ? on : lights, !on.length) }, h('span', { class: 'switch' + (on.length ? ' on' : '') })) : null);
+  }));
+}
+
+/** Redraw the chips and room cards in place after device changes. */
+function refreshSummaries() {
+  for (const [id, build] of [['statusChips', statusChips], ['roomCards', roomCards]]) {
+    const el = document.getElementById(id);
+    const busy = el?.contains(document.activeElement) && document.activeElement.matches('input, select, textarea');
+    if (el && !busy) el.replaceWith(build() || h('span', { id }));
+  }
+}

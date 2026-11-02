@@ -3,8 +3,8 @@
 import { api, isDemo } from './api.js';
 import { app, load, onChange, render, commit } from './state.js';
 import { linksView, linkCollection, linkToolbar, editLink, openBulk, openApps, openCategories, visibleLinks } from './links.js';
-import { homeView, favouriteDevices, loadConfig, syncPolling, homeCount } from './home.js';
-import { clockPanel, tickClocks, greeting, tasksPanel } from './widgets.js';
+import { homeView, favouriteDevices, loadConfig, syncPolling, homeCount, statusChips } from './home.js';
+import { clockPanel, tickClocks, greeting } from './widgets.js';
 import { openSettings, wireSettings, applyUpdate } from './settings.js';
 import { $, h, clear, toast } from './util.js';
 
@@ -60,35 +60,34 @@ function overviewView() {
   const s = app.state;
   const pinned = visibleLinks().filter(l => l.pinned);
   const rest = app.search ? visibleLinks().filter(l => !l.pinned) : [];
-  const quick = h('div', { class: 'quick' },
-    h('button', { class: 'quick-card', onclick: () => editLink() }, h('b', {}, '+'), h('span', {}, 'Add a link')),
-    h('button', { class: 'quick-card', onclick: () => openBulk() }, h('b', {}, '⇪'), h('span', {}, 'Import bookmarks')),
-    h('button', { class: 'quick-card', onclick: () => openApps() }, h('b', {}, '▣'), h('span', {}, 'Add server apps')),
-    h('button', { class: 'quick-card', onclick: () => app.home.config.configured ? go('home') : openSettings('home') },
-      h('b', {}, '⌂'), h('span', {}, app.home.config.configured ? 'Smart home' : 'Connect smart home')));
+  const actions = h('div', { class: 'row' },
+    h('button', { class: 'btn primary', onclick: () => editLink() }, '+ Add link'),
+    h('button', { class: 'btn', onclick: () => openBulk() }, '⇪ Import bookmarks'),
+    h('button', { class: 'btn', onclick: () => openApps() }, '▣ Server apps'),
+    !app.home.config.configured ? h('button', { class: 'btn', onclick: () => openSettings('home') }, '⌂ Connect smart home') : null,
+    ...linkToolbar().slice(1, 2));
 
   return h('div', { class: 'overview' },
-    h('div', { class: 'overview-main' },
-      h('section', { class: 'hero' },
-        h('div', { class: 'hero-copy' },
-          h('div', { class: 'eyebrow' }, s.settings.name.toUpperCase()),
-          h('h1', {}, greeting(s.settings.timezone) + '.'),
-          h('p', { class: 'dim' }, `${s.links.length} links · ${s.categories.length} categories` +
-            (app.home.config.configured ? ` · ${homeCount()} smart devices` : '')),
-          quick),
-        clockPanel()),
-      favouriteDevices(),
-      h('section', { class: 'panel-block' },
-        h('div', { class: 'block-head' }, h('h2', {}, app.search ? '⌕ Search results' : '★ Favourites'), h('div', { class: 'row' }, ...linkToolbar().slice(1, 2)), h('a', { href: '#all', class: 'dim' }, 'All links →')),
-        linkCollection([...pinned, ...rest], { groupTv: false }) ||
-          h('p', { class: 'dim' }, app.search ? 'No links match your search.' : 'Pin links with ☆ to keep them here.')),
-      !app.search ? s.categories.map(c => {
-        const links = s.links.filter(l => l.category === c.id && !l.pinned);
-        return links.length ? h('section', { class: 'panel-block' },
-          h('div', { class: 'block-head' }, h('h2', {}, c.icon + ' ' + c.name), h('a', { href: '#category/' + c.id, class: 'dim' }, `${links.length} →`)),
-          linkCollection(links.slice(0, 24), { groupTv: false })) : null;
-      }) : null),
-    h('aside', { class: 'overview-side' }, tasksPanel()));
+    h('section', { class: 'hero' },
+      h('div', { class: 'hero-copy' },
+        h('div', { class: 'eyebrow' }, s.settings.name.toUpperCase()),
+        h('h1', {}, greeting(s.settings.timezone) + '.'),
+        h('p', { class: 'dim' }, `${s.links.length} links · ${s.categories.length} categories` +
+          (app.home.config.configured ? ` · ${homeCount()} smart devices` : '')),
+        statusChips(),
+        actions),
+      clockPanel()),
+    favouriteDevices(),
+    h('section', { class: 'panel-block' },
+      h('div', { class: 'block-head' }, h('h2', {}, app.search ? '⌕ Search results' : '★ Favourites'), h('a', { href: '#all', class: 'dim' }, 'All links →')),
+      linkCollection([...pinned, ...rest], { groupTv: false }) ||
+        h('p', { class: 'dim' }, app.search ? 'No links match your search.' : 'Pin links with ☆ to keep them here.')),
+    !app.search ? s.categories.map(c => {
+      const links = s.links.filter(l => l.category === c.id && !l.pinned);
+      return links.length ? h('section', { class: 'panel-block' },
+        h('div', { class: 'block-head' }, h('h2', {}, c.icon + ' ' + c.name), h('a', { href: '#category/' + c.id, class: 'dim' }, `${links.length} →`)),
+        linkCollection(links, { groupTv: false })) : null;
+    }) : null);
 }
 
 // ------------------------------------------------------------ render

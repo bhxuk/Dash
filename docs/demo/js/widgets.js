@@ -1,7 +1,7 @@
-// Overview widgets: clock and world clocks, and tasks.
+// Overview widgets: greeting, clock and world clocks.
 
-import { app, commit } from './state.js';
-import { h, uid, toast } from './util.js';
+import { app } from './state.js';
+import { h } from './util.js';
 
 // ------------------------------------------------------------------ clock
 
@@ -39,28 +39,4 @@ export function tickClocks() {
     document.getElementById('clockDate').textContent = p.date;
   }
   document.querySelectorAll('[data-zone]').forEach(el => { el.textContent = parts(el.dataset.zone).time; });
-}
-
-// ------------------------------------------------------------------ tasks
-
-export function tasksPanel() {
-  const tasks = app.state.tasks;
-  const open = tasks.filter(t => !t.done).length;
-  const input = h('input', { id: 'taskInput', maxlength: 200, placeholder: 'Add a task…', 'aria-label': 'New task', required: true });
-  const form = h('form', { class: 'inline-form', onsubmit: e => {
-    e.preventDefault();
-    const text = input.value.trim();
-    if (!text) return;
-    if (tasks.length >= 100) return toast('Dash holds up to 100 tasks. Clear some finished ones.', 'error');
-    commit(s => { s.tasks.push({ id: uid(), text, done: false }); });
-    document.getElementById('taskInput')?.focus();
-  } }, input, h('button', { class: 'iconbtn', 'aria-label': 'Add task' }, '+'));
-  return h('section', { class: 'panel-block side-block' },
-    h('div', { class: 'block-head' }, h('h2', {}, '☑ Tasks'), h('span', { class: 'count' }, open)),
-    h('ul', { class: 'tasks' }, tasks.map(t => h('li', { class: t.done ? 'done' : '' },
-      h('label', {}, h('input', { type: 'checkbox', checked: t.done, onchange: () => commit(s => { s.tasks.find(x => x.id === t.id).done = !t.done; }) }), h('span', {}, t.text)),
-      h('button', { class: 'iconbtn small', 'aria-label': 'Delete task', onclick: () => commit(s => { s.tasks = s.tasks.filter(x => x.id !== t.id); }) }, '✕')))),
-    !tasks.length ? h('p', { class: 'hint' }, 'Nothing to do. Nice.') : null,
-    form,
-    tasks.some(t => t.done) ? h('button', { class: 'linkbtn', onclick: () => commit(s => { s.tasks = s.tasks.filter(x => !x.done); }) }, 'Clear finished') : null);
 }

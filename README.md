@@ -21,14 +21,13 @@ check the time, switch the lights and get on with your day. Inspired by [HomeLab
 | Dashboard | Dark navy panels, cyan accents, a sidebar, responsive cards and a light theme |
 | Clock & date | UK date formatting, configurable main time zone, optional seconds, New York / UTC / Tokyo clocks |
 | Links & apps | Add, edit, delete, pin, categorise and search your own shortcuts |
-| Smart home | Lights, Google Nest speakers and Chromecasts, thermostats, plugs, sensors and scenes through Home Assistant, grouped by room |
+| Smart home | Status chips, room cards with one-tap lights, and full controls for lights, Google Nest speakers and Chromecasts, thermostats, plugs, sensors and scenes through Home Assistant |
 | Cameras | Live-refreshing snapshots and a full-screen live view for Aqara and other Home Assistant cameras |
 | Bulk import | Paste URL lists, named lists, CSV/TSV and Markdown, or select .url / .webloc / text / HTML bookmark files; preview, deduplicate and choose categories |
 | Layouts | Smaller compact cards by default, classic cards, table/list rows and an Android TV-inspired launcher with category shelves and keyboard navigation |
 | Organisation | Custom order, drag and drop, keyboard move buttons, alphabetical / frequent / recent sorting |
 | Previews | Details panel, your own preview image URL and an optional sandboxed live website preview |
 | Homelab starter | One-click shortcuts for Plex, the *arr apps, qBittorrent, Seerr, Tautulli, Home Assistant, Portainer, Glances, ROMM, PDFDing and more, with editable ports |
-| Everyday extras | A small task list |
 | Appearance | Dark/light theme, six accent colours, three backgrounds and compact cards |
 | Data | Server-side JSON storage, export/import, snapshots and conflict detection across browser tabs |
 | Updates | Published-release checks, changelog, one-click update, pre-update validation and backup, automatic code rollback if startup fails |
