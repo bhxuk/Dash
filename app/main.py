@@ -206,6 +206,7 @@ def run():
     server.store = store
     server.home = HomeAssistant(data)
     server.updater = Updater(ROOT, store)
+    server.updater.run_automatic()
     print(f'Dash {VERSION} on port {server.server_port}', flush=True)
     server.serve_forever()
 

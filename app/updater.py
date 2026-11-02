@@ -40,6 +40,43 @@ class Updater:
             return False, 'The Git checkout must be mounted at /app.'
         return True, ''
 
+    # ---- automatic updates -------------------------------------------
+    def auto_enabled(self):
+        try:
+            return self.store.read()['settings'].get('autoUpdate', True)
+        except Exception:
+            return False
+
+    def _rolled_back(self, version):
+        """True if this exact version already failed and was rolled back, so we don't loop."""
+        try:
+            result = json.loads((self.store.root / 'update-result.json').read_text())
+            return result.get('status') == 'rolled_back' and result.get('version') == version
+        except (OSError, ValueError):
+            return False
+
+    def auto_tick(self):
+        """Check GitHub and install a newer release if automatic updates are on."""
+        if not self.capability()[0] or not self.auto_enabled() or self.state in ('updating', 'restarting'):
+            return False
+        self.check()
+        if self.status()['available'] and not self._rolled_back(self.latest):
+            self.log = []
+            return self.start()
+        return False
+
+    def run_automatic(self, first_delay=120, interval=3600):
+        """Background loop: first check shortly after start-up, then hourly."""
+        def loop():
+            time.sleep(first_delay)
+            while True:
+                try:
+                    self.auto_tick()
+                except Exception as exc:  # never let the loop die
+                    print(f'Automatic update check failed: {exc}', flush=True)
+                time.sleep(interval)
+        threading.Thread(target=loop, daemon=True, name='auto-update').start()
+
     def status(self):
         ok, reason = self.capability()
         available = self.latest is not None and version_tuple(self.latest) > version_tuple(self.current)
@@ -47,7 +84,7 @@ class Updater:
             recovery = json.loads((self.store.root / 'update-result.json').read_text())
         except (OSError, ValueError):
             recovery = None
-        return dict(current=self.current, latest=self.latest, available=available, canUpdate=ok, reason=reason,
+        return dict(current=self.current, latest=self.latest, available=available, canUpdate=ok, reason=reason, auto=self.auto_enabled(),
                     state=self.state, error=self.error, checked=self.checked, notes=self.notes, log=self.log[-100:], recovery=recovery)
 
     def check(self):

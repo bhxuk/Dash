@@ -167,7 +167,8 @@
       "America/New_York",
       "UTC",
       "Asia/Tokyo"
-    ]
+    ],
+    "autoUpdate": true
   },
   "home": {
     "favourites": [

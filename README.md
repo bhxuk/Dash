@@ -5,7 +5,7 @@
 **Your links. Your apps. Your smart home. Your everyday launchpad.**
 
 A modern personal dashboard for your local network. Save your favourite sites, organise your homelab,
-check the time, jot down a note and get on with your day. Inspired by [HomeLabStats](https://github.com/bhxuk/HomeLabStats).
+check the time, switch the lights and get on with your day. Inspired by [HomeLabStats](https://github.com/bhxuk/HomeLabStats).
 
 [**Website**](https://bhxuk.github.io/Dash/) · [**Interactive demo**](https://bhxuk.github.io/Dash/demo/) ·
 [Install](#install) · [Releases](https://github.com/bhxuk/Dash/releases) · [Changelog](CHANGELOG.md)
@@ -28,7 +28,7 @@ check the time, jot down a note and get on with your day. Inspired by [HomeLabSt
 | Organisation | Custom order, drag and drop, keyboard move buttons, alphabetical / frequent / recent sorting |
 | Previews | Details panel, your own preview image URL and an optional sandboxed live website preview |
 | Homelab starter | One-click shortcuts for Plex, the *arr apps, qBittorrent, Seerr, Tautulli, Home Assistant, Portainer, Glances, ROMM, PDFDing and more, with editable ports |
-| Everyday extras | Quick notes with an explicit Save button, and a small task list |
+| Everyday extras | A small task list |
 | Appearance | Dark/light theme, six accent colours, three backgrounds and compact cards |
 | Data | Server-side JSON storage, export/import, snapshots and conflict detection across browser tabs |
 | Updates | Published-release checks, changelog, one-click update, pre-update validation and backup, automatic code rollback if startup fails |
@@ -76,7 +76,7 @@ The container runs as the configured UID/GID. Your checkout and data folder must
 
 Most websites block embedded viewing or require cookies that do not work in frames. Dash always provides a direct Open website link. Preview images are optional URLs you supply; Dash does not capture screenshots, proxy private websites or copy their login sessions. Local HTTPS apps with self-signed certificates may need to be opened directly first.
 
-Notes are saved by clicking **Save note**. Dash warns before leaving with unsaved note changes. If another browser has edited the dashboard, reload before saving; the existing data is protected from silent overwrites.
+If another browser has edited the dashboard, Dash reloads the latest copy instead of silently overwriting it.
 
 ## Smart home (lights, Aqara cameras, Google devices)
 
@@ -117,7 +117,7 @@ Layouts preserve the same links, favourites, search, previews and sorting. The T
 
 ## Updates
 
-Open **Settings & updates → Updates → Check for updates**. When a newer stable release is published, click **Update now**.
+Dash installs new releases **automatically**: it checks GitHub two minutes after starting and then every hour, and installs any newer stable release using the safe process below. Open pages reload themselves afterwards. To update by hand instead, untick **Settings & updates → Updates → Install updates automatically**; Dash then shows a banner with **Update now** when a release is ready.
 
 Dash fetches the exact release tag from `bhxuk/Dash`, checks that it is a fast-forward of your install, validates its version and runs its self-tests in a temporary Git worktree. It then creates a dashboard snapshot, fast-forwards the source and restarts the app. The immutable Docker supervisor waits up to 30 seconds for the new version's health endpoint. If startup fails, it restores the previous source commit and keeps your dashboard data. An update result is stored in `data/update-result.json`.
 

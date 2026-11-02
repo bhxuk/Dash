@@ -43,6 +43,10 @@ export function wireSettings() {
   };
   $('#checkUpdates').onclick = checkUpdates;
   $('#applyUpdate').onclick = applyUpdate;
+  $('#autoUpdate').onchange = e => {
+    const on = e.target.checked;
+    commit(s => { s.settings.autoUpdate = on; }, on ? 'Updates will install automatically' : 'Automatic updates off. Dash will tell you when one is ready.');
+  };
 }
 
 // ------------------------------------------------------------ appearance
@@ -166,6 +170,7 @@ async function loadUpdates() {
 }
 
 function showUpdate(s) {
+  $('#autoUpdate').checked = app.state.settings.autoUpdate !== false;
   $('#installedVersion').textContent = s.current;
   $('#latestVersion').textContent = s.latest || '—';
   const message = $('#updateMessage');
@@ -187,9 +192,14 @@ async function checkUpdates() {
   try { showUpdate(await api('updates/check', 'POST', {})); } catch (error) { toast(error.message, 'error'); } finally { button.disabled = false; }
 }
 
-async function applyUpdate() {
+export async function applyUpdate() {
   if (!await confirmDialog('Install the update now? Dash snapshots your data, restarts and rolls back automatically if anything fails.', 'Update now', false)) return;
   try { showUpdate(await api('updates/apply', 'POST', {})); } catch (error) { toast(error.message, 'error'); return; }
+  watchUpdate();
+}
+
+/** Poll until the server comes back on a new version, then reload the page. */
+export function watchUpdate() {
   clearInterval(updateTimer);
   updateTimer = setInterval(async () => {
     try {

@@ -1,4 +1,4 @@
-// Overview widgets: clock and world clocks, notes and tasks.
+// Overview widgets: clock and world clocks, and tasks.
 
 import { app, commit } from './state.js';
 import { h, uid, toast } from './util.js';
@@ -39,35 +39,6 @@ export function tickClocks() {
     document.getElementById('clockDate').textContent = p.date;
   }
   document.querySelectorAll('[data-zone]').forEach(el => { el.textContent = parts(el.dataset.zone).time; });
-}
-
-// ------------------------------------------------------------------ notes
-
-let draft = null; // unsaved note text survives re-renders
-
-export const notesDirty = () => draft !== null && draft !== app.state.notes;
-
-export function notesPanel() {
-  const status = h('span', { class: 'hint' }, notesDirty() ? 'Unsaved changes' : 'Saved');
-  const save = h('button', { class: 'btn small primary', disabled: !notesDirty(), onclick: saveNotes }, 'Save note');
-  const area = h('textarea', { id: 'notes', rows: 6, maxlength: 20000, placeholder: 'Jot something down…', 'aria-label': 'Notes',
-    oninput: e => {
-      draft = e.target.value;
-      save.disabled = !notesDirty();
-      status.textContent = notesDirty() ? 'Unsaved changes' : 'Saved';
-    },
-    onkeydown: e => { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveNotes(); } } });
-  area.value = draft ?? app.state.notes;
-  return h('section', { class: 'panel-block side-block' },
-    h('div', { class: 'block-head' }, h('h2', {}, '✎ Notes'), status), area,
-    h('div', { class: 'row' }, h('span', { class: 'hint' }, 'Ctrl+S to save'), h('span', { class: 'spacer' }), save));
-}
-
-async function saveNotes() {
-  if (!notesDirty()) return;
-  const text = draft;
-  const ok = await commit(s => { s.notes = text; }, 'Note saved');
-  if (ok) draft = null;
 }
 
 // ------------------------------------------------------------------ tasks

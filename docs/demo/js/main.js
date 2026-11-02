@@ -4,8 +4,8 @@ import { api, isDemo } from './api.js';
 import { app, load, onChange, render, commit } from './state.js';
 import { linksView, linkCollection, linkToolbar, editLink, openBulk, openApps, openCategories, visibleLinks } from './links.js';
 import { homeView, favouriteDevices, loadConfig, syncPolling, homeCount } from './home.js';
-import { clockPanel, tickClocks, greeting, notesPanel, tasksPanel, notesDirty } from './widgets.js';
-import { openSettings, wireSettings } from './settings.js';
+import { clockPanel, tickClocks, greeting, tasksPanel } from './widgets.js';
+import { openSettings, wireSettings, applyUpdate } from './settings.js';
 import { $, h, clear, toast } from './util.js';
 
 // ------------------------------------------------------------ routing
@@ -88,7 +88,7 @@ function overviewView() {
           h('div', { class: 'block-head' }, h('h2', {}, c.icon + ' ' + c.name), h('a', { href: '#category/' + c.id, class: 'dim' }, `${links.length} →`)),
           linkCollection(links.slice(0, 24), { groupTv: false })) : null;
       }) : null),
-    h('aside', { class: 'overview-side' }, notesPanel(), tasksPanel()));
+    h('aside', { class: 'overview-side' }, tasksPanel()));
 }
 
 // ------------------------------------------------------------ render
@@ -162,8 +162,41 @@ function wireGlobal() {
     }
     tile.parentElement && document.activeElement.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   });
-  window.addEventListener('beforeunload', e => { if (notesDirty()) { e.preventDefault(); e.returnValue = ''; } });
   setInterval(tickClocks, 1000);
+}
+
+// ------------------------------------------------------------ updates
+
+/**
+ * Every minute: reload when the server is running a newer version (for example
+ * after an automatic update), and show a banner when an update is ready.
+ */
+async function watchForUpdates() {
+  if (isDemo) return;
+  const banner = $('#updateBanner');
+  try {
+    const health = await api('health');
+    if (app.version && health.version !== app.version) {
+      clear(banner, `Dash updated to ${health.version}. Reloading…`);
+      banner.hidden = false;
+      setTimeout(() => location.reload(), 1500);
+      return;
+    }
+    const status = await api('updates');
+    if (status.state === 'updating' || status.state === 'restarting') {
+      clear(banner, `Installing Dash ${status.latest}… this page will reload by itself.`);
+    } else if (status.available && status.canUpdate && !status.auto) {
+      clear(banner, `Dash ${status.latest} is ready to install. `,
+        h('button', { class: 'btn small primary', onclick: () => applyUpdate() }, 'Update now'),
+        h('button', { class: 'btn small', onclick: () => openSettings('updates') }, 'What’s new'));
+    } else {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+  } catch {
+    /* server restarting; try again next minute */
+  }
 }
 
 async function boot() {
@@ -176,6 +209,8 @@ async function boot() {
     $('#version').textContent = health.version;
     app.view = parseHash();
     render();
+    watchForUpdates();
+    setInterval(watchForUpdates, 60 * 1000);
   } catch (error) {
     clear($('#view'), h('div', { class: 'empty' }, h('b', {}, 'Dash could not load your dashboard.'), h('p', {}, error.message),
       h('button', { class: 'btn primary', onclick: () => location.reload() }, 'Try again')));

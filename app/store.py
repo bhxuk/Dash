@@ -152,7 +152,7 @@ def validate(raw):
             'theme': s.get('theme', 'dark'), 'background': s.get('background', 'aurora'),
             'accent': s.get('accent') if s.get('accent') in COLORS else COLORS[0],
             'layout': layout, 'compact': layout == 'compact', 'seconds': bool(s.get('seconds', False)),
-            'clocks': clocks,
+            'clocks': clocks, 'autoUpdate': bool(s.get('autoUpdate', True)),
         },
         'home': {
             'favourites': entity_list(home.get('favourites', [])),

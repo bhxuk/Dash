@@ -13,6 +13,8 @@
 <body data-theme="dark" data-background="aurora">
 <div id="demoBanner" class="demo-banner" hidden>INTERACTIVE DEMO · Changes stay in this browser. <a href="../#install">Run Dash on your server ↗</a></div>
 
+<div id="updateBanner" class="update-banner" role="status" hidden></div>
+
 <header class="top">
   <button id="menuToggle" class="iconbtn menu-toggle" aria-label="Open menu">☰</button>
   <a class="logo" href="#overview"><span class="mark">▦</span> Dash<span class="cursor"></span></a>
@@ -159,6 +161,7 @@
   <section data-panel="updates" hidden>
     <div class="version-grid"><div><span>INSTALLED</span><b id="installedVersion">—</b></div><div><span>LATEST</span><b id="latestVersion">—</b></div><div><span>CHANNEL</span><b>Stable</b></div></div>
     <p id="updateMessage">Check GitHub for a published release.</p>
+    <label class="checklabel"><input type="checkbox" id="autoUpdate"> Install updates automatically <span class="dim">(checks every hour; backs up first and rolls back if anything fails)</span></label>
     <div class="row"><button class="btn" id="checkUpdates">Check for updates</button><button class="btn primary" id="applyUpdate" hidden>Update now ↗</button></div>
     <pre id="updateLog" hidden></pre>
     <h3>Changelog</h3>

@@ -102,6 +102,7 @@ kbd { font: 10px var(--mono); border: 1px solid var(--line2); border-radius: 4px
 /* ---------- top bar */
 .demo-banner { background: var(--accent); color: #031016; font: 11px var(--mono); text-align: center; padding: 7px; letter-spacing: .5px; }
 .demo-banner a { color: inherit; text-decoration: underline; }
+.update-banner { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; background: color-mix(in srgb, var(--accent) 14%, var(--bg)); border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); color: var(--text); font-size: 13px; padding: 8px 16px; }
 .top {
   height: 66px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 18px;
   padding: 0 26px; position: sticky; top: 0; z-index: 20;

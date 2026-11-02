@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0] - 2026-11-02
+
+- Dash now installs new releases automatically. It checks GitHub every hour, backs up your data, updates, and rolls back by itself if the new version fails to start. Turn this off in Settings → Updates.
+- With automatic updates off, a banner tells you when an update is ready, with an **Update now** button.
+- Open Dash pages reload themselves after an update, so you always see the latest version.
+- Removed the Notes panel from the overview. Existing notes stay in your backups and data file.
+- No image rebuild is required; use the in-app updater (this is the last time you need to click it).
+
 ## [2.0.0] - 2026-11-01
 
 - Rebuilt Dash from the ground up with clean, readable code: modular JavaScript, a rewritten stylesheet and a tidier Python server. Same LAN-only Docker setup and no extra dependencies.

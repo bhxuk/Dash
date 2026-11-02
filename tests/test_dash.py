@@ -195,6 +195,37 @@ class UpdateTests(unittest.TestCase):
                 self.assertFalse(updater.start())
                 self.assertIn('Docker', updater.status()['error'])
 
+    def test_automatic_updates(self):
+        with tempfile.TemporaryDirectory() as folder:
+            store = Store(folder)
+            updater = Updater(Path(__file__).resolve().parents[1], store)
+            updater.current = '2.0.0'
+            def fake_check():
+                updater.latest = '2.1.0'
+                return updater.status()
+            with patch.object(updater, 'capability', return_value=(True, '')), \
+                    patch.object(updater, 'check', side_effect=fake_check) as check, \
+                    patch.object(updater, 'start', return_value=True) as start:
+                # On by default: a newer release is installed.
+                self.assertTrue(updater.status()['auto'])
+                self.assertTrue(updater.auto_tick())
+                start.assert_called_once()
+                # A version that already failed and was rolled back is not retried.
+                (Path(folder) / 'update-result.json').write_text(json.dumps({'status': 'rolled_back', 'version': '2.1.0'}))
+                self.assertFalse(updater.auto_tick())
+                self.assertEqual(start.call_count, 1)
+                # Turned off in settings: no check at all.
+                state = store.read()
+                state['settings']['autoUpdate'] = False
+                store.save(state)
+                check.reset_mock()
+                self.assertFalse(updater.auto_tick())
+                check.assert_not_called()
+                self.assertFalse(updater.status()['auto'])
+            # Never runs outside the supervised Docker install.
+            with patch.dict(os.environ, {'INSTALL_METHOD': 'manual', 'DASH_SUPERVISED': ''}):
+                self.assertFalse(updater.auto_tick())
+
     def test_failed_validation_preserves_checkout(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder)
